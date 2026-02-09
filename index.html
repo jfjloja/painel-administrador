@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - JFJ</title>
+
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="admin-page">
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <header class="admin-header">
+        <div class="logo">
+            <h1>JFJ <span>ADMIN</span></h1>
+        </div>
+        <div class="admin-actions">
+            <span id="admin-user">admin@user.com</span>
+            <button id="btn-change-pass" class="btn-secondary" onclick="openPasswordModal()">
+                <i class="fa-solid fa-key"></i> Senha
+            </button>
+            <button id="btn-logout" class="btn-logout">
+                <i class="fa-solid fa-right-from-bracket"></i> Sair
+            </button>
+        </div>
+    </header>
+
+    <main class="admin-content">
+        <!-- TAB NAVIGATION -->
+        <div class="admin-tabs">
+            <button class="admin-tab active" data-tab="products">
+                <i class="fa-solid fa-box"></i> Gerenciar Produtos
+            </button>
+            <button class="admin-tab" data-tab="orders">
+                <i class="fa-solid fa-clipboard-list"></i> Gerenciador de Pedidos
+            </button>
+        </div>
+
+        <!-- PRODUCTS TAB -->
+        <div id="tab-products" class="tab-content active">
+            <div class="admin-toolbar">
+                <h2>Gerenciar Produtos</h2>
+                <div class="admin-search-bar">
+                    <i class="fa-solid fa-search"></i>
+                    <input type="text" id="admin-search" placeholder="Buscar por nome...">
+                </div>
+                <button id="btn-add-new" class="btn-add-new">
+                    <i class="fa-solid fa-plus"></i> Adicionar Novo Item
+                </button>
+            </div>
+
+            <div class="product-grid" id="admin-grid">
+                <!-- Items injected by JS -->
+            </div>
+        </div>
+
+        <!-- ORDERS TAB -->
+        <div id="tab-orders" class="tab-content">
+            <div class="admin-toolbar orders-toolbar">
+                <h2>Gerenciador de Pedidos</h2>
+                <div class="orders-filters">
+                    <div class="admin-search-bar">
+                        <i class="fa-solid fa-search"></i>
+                        <input type="text" id="orders-search" placeholder="Buscar por nome ou telefone...">
+                    </div>
+                    <div class="date-filters">
+                        <select id="filter-month" class="date-filter-select">
+                            <option value="">Todos os Meses</option>
+                            <option value="1">Janeiro</option>
+                            <option value="2">Fevereiro</option>
+                            <option value="3">Março</option>
+                            <option value="4">Abril</option>
+                            <option value="5">Maio</option>
+                            <option value="6">Junho</option>
+                            <option value="7">Julho</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Setembro</option>
+                            <option value="10">Outubro</option>
+                            <option value="11">Novembro</option>
+                            <option value="12">Dezembro</option>
+                        </select>
+                        <select id="filter-year" class="date-filter-select">
+                            <option value="">Todos os Anos</option>
+                            <!-- Years populated by JS -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="orders-container" class="orders-grid">
+                <!-- Order cards injected by JS -->
+            </div>
+
+            <div id="orders-empty" class="empty-state hidden">
+                <i class="fa-solid fa-inbox"></i>
+                <p>Nenhum pedido encontrado.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- ORDER LIGHTBOX MODAL -->
+    <div id="order-lightbox" class="order-lightbox-overlay hidden">
+        <div class="order-lightbox-content">
+            <button class="order-lightbox-close" onclick="closeOrderLightbox()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="order-lightbox-body">
+                <!-- Order details injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD/EDIT PRODUCT MODAL -->
+    <div id="product-modal" class="modal-overlay">
+        <div class="admin-modal-content">
+            <button id="close-modal" class="close-modal">&times;</button>
+
+            <h3 id="modal-title">Adicionar Novo Produto</h3>
+
+            <form id="product-form" class="admin-form">
+                <input type="hidden" id="p-id">
+
+                <!-- Image Upload -->
+                <!-- Gallery Upload -->
+                <div class="form-group full-width">
+                    <label>Fotos do Produto (Max 5)</label>
+
+                    <!-- Gallery Preview Container -->
+                    <div class="gallery-preview" id="gallery-preview">
+                        <!-- JS will inject images here -->
+                    </div>
+
+                    <div class="image-upload-area" id="upload-area" style="margin-top: 10px;">
+                        <input type="file" id="image-input" accept="image/*" multiple hidden>
+                        <div class="upload-placeholder" id="upload-placeholder">
+                            <i class="fa-solid fa-camera"></i>
+                            <p>Adicionar Fotos</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nome do Produto</label>
+                        <input type="text" id="p-name" required placeholder="Ex: Short Jeans">
+                    </div>
+                    <div class="form-group">
+                        <label>Preço (R$)</label>
+                        <input type="number" id="p-price" step="0.01" required placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Categoria</label>
+                    <select id="p-category">
+                        <option value="Shorts">Shorts</option>
+                        <option value="Saias">Saias</option>
+                        <option value="Conjuntos">Conjuntos</option>
+                        <option value="Blusas">Blusas</option>
+                        <option value="Calças">Calças</option>
+                        <option value="Vestidos">Vestidos</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Tamanhos Disponíveis</label>
+                    <div class="size-selector" id="size-selector">
+                        <label class="size-check"><input type="checkbox" value="P"> P</label>
+                        <label class="size-check"><input type="checkbox" value="M"> M</label>
+                        <label class="size-check"><input type="checkbox" value="G"> G</label>
+                        <label class="size-check"><input type="checkbox" value="GG"> GG</label>
+                        <label class="size-check"><input type="checkbox" value="U"> U</label>
+                    </div>
+                </div>
+
+                <!-- Status Toggle Buttons -->
+                <div class="status-toggles">
+                    <label class="status-btn status-btn-new">
+                        <input type="checkbox" id="p-new" hidden>
+                        <span>NOVIDADE</span>
+                    </label>
+                    <label class="status-btn status-btn-sale">
+                        <input type="checkbox" id="p-sale" hidden>
+                        <span>PROMOÇÃO</span>
+                    </label>
+                    <label class="status-btn status-btn-stock">
+                        <input type="checkbox" id="p-stock" hidden>
+                        <span>ESGOTADO</span>
+                    </label>
+                </div>
+
+                <div id="form-error" class="error-msg hidden"></div>
+
+                <button type="submit" class="btn-save" id="btn-save">
+                    <i class="fa-solid fa-floppy-disk"></i> Salvar Produto
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- PASSWORD MODAL -->
+    <div id="password-modal" class="modal-overlay">
+        <div class="admin-modal-content" style="width: 400px;">
+            <button id="close-pass-modal" class="close-modal">&times;</button>
+
+            <h3>Alterar Senha</h3>
+            <p style="color: #666; margin-bottom: 20px;">Defina sua nova senha de acesso.</p>
+
+            <form id="password-form" class="admin-form">
+                <div class="form-group">
+                    <label>Nova Senha</label>
+                    <input type="password" id="new-password" required minlength="6" placeholder="Mínimo 6 caracteres">
+                </div>
+
+                <div id="pass-error" class="error-msg hidden"></div>
+
+                <button type="submit" class="btn-save" id="btn-save-pass">
+                    Atualizar Senha
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Logic -->
+    <script src="admin.js"></script>
+
+</body>
+
+</html>

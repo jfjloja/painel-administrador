@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Administrativo - JFJ Confecções</title>
+
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="login-body">
+
+    <div class="login-container">
+        <div class="login-header">
+            <h1>JFJ <span>ADMIN</span></h1>
+            <p>Acesso Restrito</p>
+        </div>
+
+        <form id="login-form" class="login-form">
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <div class="input-icon">
+                    <i class="fa-solid fa-envelope"></i>
+                    <input type="email" id="email" placeholder="admin@email.com" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <div class="input-icon">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="password" placeholder="Sua senha" required>
+                </div>
+            </div>
+
+            <div id="login-error" class="error-msg hidden">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span id="error-text">Erro ao fazer login</span>
+            </div>
+
+            <button type="submit" class="btn-login" id="btn-login">
+                Entrar no Sistema
+            </button>
+        </form>
+    </div>
+
+    <script>
+        (async function () {
+            // console.log("Starting Login Page (Scoped)...");
+
+            const CONFIG = {
+                URL: 'https://awcmwwhxtwdwfqhtahec.supabase.co',
+                KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3Y213d2h4dHdkd2ZxaHRhaGVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwOTAyNDksImV4cCI6MjA4NTY2NjI0OX0.TGYfoqV5H7VPjYFRk-yPh5cPzr2pL5cBXtJy_5kRsCA'
+            };
+
+            // CRITICAL: Check Protocol
+            if (window.location.protocol === 'file:') {
+                console.error("WRONG PROTOCOL DETECTED: file://");
+                document.body.innerHTML = `
+                    <div style="background:linear-gradient(135deg, #FF416C, #FF4B2B); height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; font-family:sans-serif; text-align:center; padding:20px;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 5rem; margin-bottom: 20px;"></i>
+                    <h1 style="font-size:2.5rem; margin:0 0 10px 0;">Modo Incorreto Detectado</h1>
+                    <p style="font-size:1.2rem;">Por favor, use este endereço no navegador:</p>
+                    <div style="background:white; color:black; padding:20px; border-radius:10px; font-size:1.5rem; font-weight:bold; margin-top:10px;">
+                        http://localhost:3000/login.html
+                    </div>
+                </div>
+                `;
+                throw new Error("Protocol Blocked");
+            }
+
+            let authClient;
+
+            try {
+                if (!window.supabase) {
+                    console.error("Supabase object missing from window!");
+                    throw new Error("Supabase Library Not Loaded");
+                }
+                // Use a non-conflicting variable name
+                authClient = window.supabase.createClient(CONFIG.URL, CONFIG.KEY);
+                console.log("Supabase Client Initialized OK");
+            } catch (err) {
+                console.error("Init Error:", err.message);
+                alert("Erro de Conexão: " + err.message);
+                return;
+            }
+
+            console.log("Checking session...");
+
+            try {
+                const { data } = await authClient.auth.getSession();
+                if (data && data.session) {
+                    console.log("User already logged in! Redirecting...");
+                    window.location.href = 'admin.html';
+                    return;
+                } else {
+                    console.log("No active session. Waiting for login...");
+                }
+            } catch (err) {
+                console.error("Session Check Failed:", err.message);
+            }
+
+            // Form Handler
+            const form = document.getElementById('login-form');
+            if (form) {
+                console.log("Login form element found.");
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    console.log("Login Button Clicked!");
+
+                    const emailLine = document.getElementById('email');
+                    const passLine = document.getElementById('password');
+                    const btn = document.getElementById('btn-login');
+
+                    if (!emailLine || !passLine) {
+                        console.error("Missing input fields!");
+                        return;
+                    }
+
+                    const email = emailLine.value;
+                    const password = passLine.value;
+                    const errorEl = document.getElementById('login-error');
+
+                    console.log("Attempting login for:", email);
+
+                    btn.disabled = true;
+                    btn.innerText = 'Verificando...';
+                    if (errorEl) errorEl.classList.add('hidden');
+
+                    try {
+                        const { data, error } = await authClient.auth.signInWithPassword({
+                            email, password
+                        });
+
+                        if (error) {
+                            console.error("Login Failed:", error.message);
+                            if (errorEl) {
+                                errorEl.classList.remove('hidden');
+                                document.getElementById('error-text').innerText = error.message;
+                            } else {
+                                alert("Login Failed: " + error.message);
+                            }
+                            btn.disabled = false;
+                            btn.innerText = 'Entrar no Sistema';
+                        } else {
+                            console.log("Login Success! Redirecting...");
+                            btn.innerText = 'Sucesso! Redirecionando...';
+                            // Redirect to index.html (which was formerly admin.html)
+                            window.location.href = 'index.html';
+                        }
+                    } catch (err) {
+                        console.error("Crash during login:", err.message);
+                        alert("Erro grave: " + err.message);
+                        btn.disabled = false;
+                    }
+                });
+            } else {
+                console.error("Login Form NOT FOUND in DOM");
+            }
+        })();
+    </script>
+</body>
+
+</html>
