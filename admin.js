@@ -155,6 +155,9 @@
         // Tab Navigation
         setupTabs();
 
+        // Emergency Toggle
+        setupEmergencyToggle();
+
         // Load Data
         fetchProducts();
     }
@@ -898,5 +901,115 @@
             closeOrderLightbox();
         }
     });
+
+    // =========================================================
+    // EMERGENCY STORE TOGGLE (Schedule-Aware)
+    // =========================================================
+
+    let isEmergencyClosed = false;
+
+    function getScheduleStatus() {
+        const now = new Date();
+        const brTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+        const day = brTime.getDay(); // 0=Sun, 1=Mon, ... 5=Fri, 6=Sat
+        const currentMinutes = brTime.getHours() * 60 + brTime.getMinutes();
+
+        // Open: Mon(1) 00:00 → Fri(5) 10:00 (600min)
+        if (day >= 1 && day <= 4) return true;  // Mon-Thu: open
+        if (day === 5 && currentMinutes <= 600) return true; // Fri before 10AM: open
+        return false; // Fri after 10AM, Sat, Sun: closed
+    }
+
+    async function setupEmergencyToggle() {
+        const btn = document.getElementById('btn-emergency');
+        if (!btn) return;
+
+        // Fetch current emergency state
+        try {
+            const { data, error } = await supabase
+                .from('store_settings')
+                .select('emergency_closed')
+                .limit(1)
+                .single();
+
+            if (!error && data) {
+                isEmergencyClosed = data.emergency_closed === true;
+            }
+        } catch (err) {
+            console.warn('Could not fetch store settings:', err);
+        }
+
+        updateEmergencyButtonUI();
+        btn.onclick = toggleEmergency;
+
+        // Auto-refresh every 60s to keep in sync with schedule
+        setInterval(updateEmergencyButtonUI, 60000);
+    }
+
+    async function toggleEmergency() {
+        const isOpenBySchedule = getScheduleStatus();
+
+        // If closed by schedule, don't allow toggling
+        if (!isOpenBySchedule) {
+            alert('A loja já está fechada pelo horário programado (Sexta após 10h até Domingo). Não é necessário fechar manualmente.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-emergency');
+        const newState = !isEmergencyClosed;
+
+        const confirmMsg = newState
+            ? 'Tem certeza que deseja FECHAR a loja manualmente? Nenhum cliente poderá fazer pedidos até você reabrir.'
+            : 'Deseja REABRIR a loja para pedidos?';
+
+        if (!confirm(confirmMsg)) return;
+
+        btn.disabled = true;
+
+        try {
+            const { error } = await supabase
+                .from('store_settings')
+                .update({ emergency_closed: newState, updated_at: new Date().toISOString() })
+                .not('id', 'is', null);
+
+            if (error) {
+                alert('Erro ao atualizar: ' + error.message);
+            } else {
+                isEmergencyClosed = newState;
+                updateEmergencyButtonUI();
+                alert(newState ? 'Loja FECHADA manualmente.' : 'Loja REABERTA para pedidos.');
+            }
+        } catch (err) {
+            console.error('Emergency toggle error:', err);
+            alert('Erro ao atualizar status da loja.');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function updateEmergencyButtonUI() {
+        const btn = document.getElementById('btn-emergency');
+        const label = document.getElementById('emergency-label');
+        if (!btn) return;
+
+        const isOpenBySchedule = getScheduleStatus();
+
+        if (!isOpenBySchedule) {
+            // Closed by schedule — show as closed, no manual action needed
+            btn.classList.add('emergency-active');
+            btn.classList.add('schedule-closed');
+            if (label) label.textContent = 'Loja Fechada (Horário)';
+        } else if (isEmergencyClosed) {
+            // Manually closed during open hours
+            btn.classList.add('emergency-active');
+            btn.classList.remove('schedule-closed');
+            if (label) label.textContent = 'Loja Fechada (Manual)';
+        } else {
+            // Open normally
+            btn.classList.remove('emergency-active');
+            btn.classList.remove('schedule-closed');
+            if (label) label.textContent = 'Loja Aberta';
+        }
+    }
 
 })();

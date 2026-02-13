@@ -100,7 +100,7 @@
                 const { data } = await authClient.auth.getSession();
                 if (data && data.session) {
                     console.log("User already logged in! Redirecting...");
-                    window.location.href = 'admin.html';
+                    window.location.href = 'index.html';
                     return;
                 } else {
                     console.log("No active session. Waiting for login...");
@@ -154,7 +154,7 @@
                         } else {
                             console.log("Login Success! Redirecting...");
                             btn.innerText = 'Sucesso! Redirecionando...';
-                            // Redirect to index.html (which was formerly admin.html)
+                            // Redirect to admin panel
                             window.location.href = 'index.html';
                         }
                     } catch (err) {
