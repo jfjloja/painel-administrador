@@ -51,6 +51,9 @@
             <button class="admin-tab" data-tab="orders">
                 <i class="fa-solid fa-clipboard-list"></i> Gerenciador de Pedidos
             </button>
+            <button class="admin-tab" data-tab="videos">
+                <i class="fa-solid fa-video"></i> Vídeos
+            </button>
         </div>
 
         <!-- PRODUCTS TAB -->
@@ -111,6 +114,30 @@
             <div id="orders-empty" class="empty-state hidden">
                 <i class="fa-solid fa-inbox"></i>
                 <p>Nenhum pedido encontrado.</p>
+            </div>
+        </div>
+
+        <!-- VIDEOS TAB -->
+        <div id="tab-videos" class="tab-content">
+            <div class="admin-toolbar">
+                <h2>Gerenciar Vídeos</h2>
+                <div class="admin-search-bar">
+                    <i class="fa-solid fa-search"></i>
+                    <input type="text" id="admin-video-search" placeholder="Buscar por nome...">
+                </div>
+                <p style="color: #666; font-size: 0.9rem;">Faça upload de vídeos curtos (até 60s) para os seus produtos.
+                </p>
+            </div>
+
+            <input type="file" id="video-file-input" accept="video/mp4,video/webm,video/quicktime" hidden>
+
+            <div class="video-grid" id="admin-video-grid">
+                <!-- Video cards injected by JS -->
+            </div>
+
+            <div id="videos-empty" class="empty-state hidden">
+                <i class="fa-solid fa-film"></i>
+                <p>Nenhum produto encontrado.</p>
             </div>
         </div>
     </main>

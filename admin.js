@@ -141,6 +141,14 @@
             });
         }
 
+        // Video Search Bar Logic
+        const videoSearchInput = document.getElementById('admin-video-search');
+        if (videoSearchInput) {
+            videoSearchInput.addEventListener('input', (e) => {
+                renderVideoGrid(e.target.value);
+            });
+        }
+
         // Date Filter Logic
         const filterMonth = document.getElementById('filter-month');
         const filterYear = document.getElementById('filter-year');
@@ -182,6 +190,11 @@
                 // Load orders when switching to orders tab
                 if (tabName === 'orders') {
                     fetchOrders();
+                }
+
+                // Load videos when switching to videos tab
+                if (tabName === 'videos') {
+                    renderVideoGrid();
                 }
             });
         });
@@ -901,6 +914,183 @@
             closeOrderLightbox();
         }
     });
+
+    // =========================================================
+    // VIDEO MANAGEMENT FUNCTIONS
+    // =========================================================
+
+    let videoUploadTarget = null; // product ID being uploaded to
+
+    function renderVideoGrid(searchTerm = '') {
+        const grid = document.getElementById('admin-video-grid');
+        const emptyState = document.getElementById('videos-empty');
+        if (!grid) return;
+
+        let products = currentProducts || [];
+
+        // Filter by search term
+        if (searchTerm.trim()) {
+            const query = searchTerm.trim().toLowerCase();
+            products = products.filter(p => p.name && p.name.toLowerCase().includes(query));
+        }
+
+        if (products.length === 0) {
+            grid.innerHTML = '';
+            if (emptyState) emptyState.classList.remove('hidden');
+            return;
+        }
+
+        if (emptyState) emptyState.classList.add('hidden');
+        grid.innerHTML = '';
+
+        const priceFormat = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        products.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'video-admin-card';
+
+            const thumb = p.images && p.images.length ? p.images[0] : 'https://via.placeholder.com/100?text=Foto';
+            const hasVideo = !!p.video_url;
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <img src="${thumb}" alt="${p.name}">
+                    <span class="card-title">${p.name}</span>
+                    <span class="card-price">${priceFormat.format(p.price || 0)}</span>
+                </div>
+                <div class="video-admin-preview">
+                    ${hasVideo
+                    ? `<video src="${p.video_url}" controls muted preload="metadata"></video>`
+                    : `<div class="no-video"><i class="fa-solid fa-film" style="font-size:2rem;color:#ccc;display:block;margin-bottom:8px;"></i>Nenhum vídeo</div>`
+                }
+                </div>
+                <div class="video-admin-actions">
+                    <button class="btn-upload-video" onclick="window.triggerVideoUpload('${p.id}')">
+                        <i class="fa-solid fa-upload"></i> ${hasVideo ? 'Trocar' : 'Upload'}
+                    </button>
+                    ${hasVideo ? `
+                        <button class="btn-remove-video" onclick="window.removeProductVideo('${p.id}')">
+                            <i class="fa-solid fa-trash"></i> Remover
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+
+            grid.appendChild(card);
+        });
+    }
+
+    // Trigger file input for video upload
+    window.triggerVideoUpload = function (productId) {
+        videoUploadTarget = productId;
+        const input = document.getElementById('video-file-input');
+        if (input) {
+            input.value = '';
+            input.click();
+        }
+    };
+
+    // Handle video file selection
+    const videoFileInput = document.getElementById('video-file-input');
+    if (videoFileInput) {
+        videoFileInput.addEventListener('change', async (e) => {
+            if (!e.target.files || e.target.files.length === 0 || !videoUploadTarget) return;
+
+            const file = e.target.files[0];
+
+            // Validate file size (max 250MB)
+            if (file.size > 250 * 1024 * 1024) {
+                alert('O vídeo deve ter no máximo 250MB.');
+                return;
+            }
+
+            // Validate duration (max 60s) — check after metadata loads
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.src = URL.createObjectURL(file);
+
+            video.onloadedmetadata = async () => {
+                URL.revokeObjectURL(video.src);
+
+                if (video.duration > 65) { // 65s with small tolerance
+                    alert('O vídeo deve ter no máximo 60 segundos.');
+                    return;
+                }
+
+                // Upload to Supabase Storage
+                setLoading(true);
+                try {
+                    const fileName = `video-${videoUploadTarget}-${Date.now()}.${file.name.split('.').pop()}`;
+                    const { data, error } = await supabase.storage
+                        .from('Videos')
+                        .upload(fileName, file);
+
+                    if (error) throw error;
+
+                    const { data: { publicUrl } } = supabase.storage.from('Videos').getPublicUrl(fileName);
+
+                    // Update product record with video URL
+                    const { error: dbError } = await supabase
+                        .from('store_items')
+                        .update({ video_url: publicUrl })
+                        .eq('id', videoUploadTarget);
+
+                    if (dbError) throw dbError;
+
+                    // Refresh data
+                    await fetchProducts();
+                    renderVideoGrid();
+                    alert('Vídeo salvo com sucesso!');
+
+                } catch (err) {
+                    console.error('Video upload error:', err);
+                    alert('Erro ao fazer upload: ' + (err.message || err));
+                } finally {
+                    setLoading(false);
+                    videoUploadTarget = null;
+                }
+            };
+        });
+    }
+
+    // Remove video from product
+    window.removeProductVideo = async function (productId) {
+        if (!confirm('Remover o vídeo deste produto?')) return;
+
+        setLoading(true);
+        try {
+            // Find product to get video URL
+            const product = currentProducts.find(p => p.id === productId);
+            if (product && product.video_url) {
+                // Try to delete from storage (extract filename from URL)
+                try {
+                    const urlParts = product.video_url.split('/');
+                    const fileName = urlParts[urlParts.length - 1];
+                    await supabase.storage.from('Videos').remove([fileName]);
+                } catch (e) {
+                    console.warn('Could not delete video file from storage:', e);
+                }
+            }
+
+            // Clear video_url on product
+            const { error } = await supabase
+                .from('store_items')
+                .update({ video_url: null })
+                .eq('id', productId);
+
+            if (error) throw error;
+
+            await fetchProducts();
+            renderVideoGrid();
+            alert('Vídeo removido!');
+
+        } catch (err) {
+            console.error('Video remove error:', err);
+            alert('Erro ao remover: ' + (err.message || err));
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // =========================================================
     // EMERGENCY STORE TOGGLE (Schedule-Aware)
