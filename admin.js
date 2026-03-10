@@ -133,7 +133,6 @@
         }
 
         // Orders Search Bar Logic
-        // Orders Search Bar Logic
         const ordersSearchInput = document.getElementById('orders-search');
         if (ordersSearchInput) {
             ordersSearchInput.addEventListener('input', () => {
@@ -891,8 +890,167 @@
             </div>
         `;
 
+        // Inject the 'Salvar PDF' button at the bottom
+        body.innerHTML += `
+            <button id="btn-print-order" class="btn-whatsapp" style="margin-top: 15px; width: 100%; justify-content: center; background: #3B82F6;">
+                <i class="fa-solid fa-file-pdf"></i> Salvar PDF do Pedido
+            </button>
+        `;
+
         lightbox.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+
+        // Attach PDF Generation Logic
+        const printBtn = document.getElementById('btn-print-order');
+        if (printBtn) {
+            printBtn.addEventListener('click', () => {
+                // Build items rows
+                let itemRows = '';
+                if (order.items && Array.isArray(order.items)) {
+                    order.items.forEach((item, idx) => {
+                        itemRows += `
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 8px 10px; font-size: 13px; color: #333;">${idx + 1}</td>
+                                <td style="padding: 8px 10px; font-size: 13px; color: #333;">${item.product_name}</td>
+                                <td style="padding: 8px 10px; font-size: 13px; color: #333; text-align: center;">${item.size}</td>
+                                <td style="padding: 8px 10px; font-size: 13px; color: #333; text-align: center;">${item.quantity}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                const invoiceHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Pedido_${order.id.substring(0, 8).toUpperCase()}</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: 'Outfit', Arial, sans-serif; background: #fff; color: #222; padding: 30px; }
+                        .invoice { max-width: 700px; margin: 0 auto; }
+                        .header { text-align: center; border-bottom: 3px solid #D4A853; padding-bottom: 20px; margin-bottom: 20px; }
+                        .header h1 { font-size: 28px; color: #1a1a1a; font-weight: 700; }
+                        .header p { font-size: 14px; color: #666; margin-top: 5px; }
+                        .header .date { font-size: 12px; color: #888; }
+                        .status { margin-bottom: 20px; }
+                        .status span { display: inline-block; padding: 5px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+                        .customer-box { margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+                        .customer-box h3 { font-size: 14px; color: #D4A853; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+                        .customer-box table { width: 100%; border-collapse: collapse; }
+                        .customer-box td { padding: 4px 0; font-size: 13px; color: #555; }
+                        .items-section h3 { font-size: 14px; color: #D4A853; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+                        .items-table { width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; margin-bottom: 20px; }
+                        .items-table th { padding: 10px; font-size: 12px; color: #555; text-align: left; border-bottom: 2px solid #d1d5db; background: #f3f4f6; }
+                        .items-table th.center { text-align: center; }
+                        .items-table td { padding: 8px 10px; font-size: 13px; color: #333; }
+                        .items-table td.center { text-align: center; }
+                        .items-table tr { border-bottom: 1px solid #e0e0e0; }
+                        .notes { margin-bottom: 15px; padding: 12px; border-left: 4px solid #f59e0b; background: #fffbeb; border-radius: 4px; }
+                        .notes strong { font-size: 12px; color: #92400e; }
+                        .notes p { margin-top: 5px; font-size: 13px; color: #78350f; }
+                        .colors-block { margin-bottom: 15px; padding: 12px; border-left: 4px solid #ef4444; background: #fef2f2; border-radius: 4px; }
+                        .colors-block strong { font-size: 12px; color: #991b1b; }
+                        .colors-block p { margin-top: 5px; font-size: 13px; color: #7f1d1d; }
+                        .total-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #1a1a1a; border-radius: 8px; margin-top: 20px; }
+                        .total-bar .pieces { font-size: 15px; color: #ccc; }
+                        .total-bar .price { font-size: 22px; font-weight: 700; color: #D4A853; }
+                        .footer { text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb; }
+                        .footer p { font-size: 11px; color: #999; margin-top: 5px; }
+                        @media print {
+                            body { padding: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                            .no-print { display: none !important; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="invoice">
+                        <div class="header">
+                            <h1>JFJ CONFECÇÕES</h1>
+                            <p>Pedido #${order.id.substring(0, 8).toUpperCase()}</p>
+                            <p class="date">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+
+                        <div class="status">
+                            <span style="background: ${statusClass === 'confirmed' ? '#d1fae5' : statusClass === 'shipped' ? '#dbeafe' : '#fef3c7'}; color: ${statusClass === 'confirmed' ? '#065f46' : statusClass === 'shipped' ? '#1e40af' : '#92400e'};">
+                                ${statusLabel}
+                            </span>
+                        </div>
+
+                        <div class="customer-box">
+                            <h3>Informações do Cliente</h3>
+                            <table>
+                                <tr>
+                                    <td style="width:50%"><strong>Nome:</strong> ${order.nome_completo || 'N/A'}</td>
+                                    <td><strong>Telefone:</strong> ${order.telefone || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Cidade:</strong> ${order.cidade_estado || 'N/A'}</td>
+                                    <td><strong>Pagamento:</strong> ${order.forma_pagamento || 'PIX'}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2"><strong>Transporte:</strong> ${order.excursao_transportadora || 'N/A'}</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="items-section">
+                            <h3>Itens do Pedido</h3>
+                            <table class="items-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Produto</th>
+                                        <th class="center">Tamanho</th>
+                                        <th class="center">Qtd</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemRows}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        ${order.observacoes ? `
+                        <div class="notes">
+                            <strong>Observações:</strong>
+                            <p>${order.observacoes}</p>
+                        </div>
+                        ` : ''}
+
+                        ${order.cores_nao_desejadas ? `
+                        <div class="colors-block">
+                            <strong>Cores Não Desejadas:</strong>
+                            <p>${order.cores_nao_desejadas}</p>
+                        </div>
+                        ` : ''}
+
+                        <div class="total-bar">
+                            <span class="pieces">${order.total_items || 0} peças</span>
+                            <span class="price">${totalPrice}</span>
+                        </div>
+
+                        <div class="footer">
+                            <p>Pedido realizado em ${orderDate}</p>
+                            <p>JFJ Confecções — Documento gerado automaticamente</p>
+                        </div>
+                    </div>
+
+                    <div class="no-print" style="text-align: center; margin-top: 30px;">
+                        <button onclick="window.print()" style="padding: 12px 30px; background: #3B82F6; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif;">
+                            <span>🖨️ Imprimir / Salvar PDF</span>
+                        </button>
+                    </div>
+                </body>
+                </html>
+                `;
+
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(invoiceHTML);
+                printWindow.document.close();
+            });
+        }
     };
 
     window.closeOrderLightbox = function () {
