@@ -969,7 +969,7 @@
                         <div class="header">
                             <h1>JFJ CONFECÇÕES</h1>
                             <p>Pedido #${order.id.substring(0, 8).toUpperCase()}</p>
-                            <p class="date">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                            <p class="date">Gerado em ${new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</p>
                         </div>
 
                         <div class="status">
