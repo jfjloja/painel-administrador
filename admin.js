@@ -21,6 +21,19 @@
         return;
     }
 
+    // --- SECURITY: escape any user/DB-supplied value before putting it in innerHTML ---
+    // Orders are submitted by the public (anon insert is allowed by design), so their
+    // fields are untrusted and must be escaped to prevent stored XSS in this admin panel.
+    function escapeHtml(v) {
+        if (v === null || v === undefined) return '';
+        return String(v)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     // --- STATE ---
     let currentUser = null;
     let currentProducts = [];
@@ -63,6 +76,8 @@
                 currentUser = session.user;
                 const userDisplay = document.getElementById('admin-user');
                 if (userDisplay) userDisplay.innerText = currentUser.email;
+                // Auth confirmed — reveal the dashboard (hidden by default via CSS)
+                document.body.classList.add('authed');
                 setupDashboard();
             }
         }
@@ -218,7 +233,7 @@
             const div = document.createElement('div');
             div.className = 'gallery-item';
             div.innerHTML = `
-                <img src="${url}">
+                <img src="${escapeHtml(url)}">
                 <button type="button" class="gallery-remove" onclick="window.removeExistingImage(${index})">
                     <i class="fa-solid fa-times"></i>
                 </button>
@@ -362,12 +377,12 @@
             // Basic Info
             card.innerHTML = `
                 <div class="card-image-wrapper">
-                    <img src="${img}" class="card-image">
+                    <img src="${escapeHtml(img)}" class="card-image">
                 </div>
                 <div class="card-content">
-                    <div class="card-category">${p.category}</div>
-                    <h3 class="card-title">${p.name}</h3>
-                    <div class="card-price">R$ ${p.price}</div>
+                    <div class="card-category">${escapeHtml(p.category)}</div>
+                    <h3 class="card-title">${escapeHtml(p.name)}</h3>
+                    <div class="card-price">R$ ${escapeHtml(p.price)}</div>
                     
                     <div class="admin-card-actions">
                         <button class="btn-edit" onclick="editProduct('${p.id}')">
@@ -596,7 +611,7 @@
             let itemsHtml = '';
             if (order.items && Array.isArray(order.items)) {
                 itemsHtml = order.items.map(item =>
-                    `${item.product_name} (${item.size}) x${item.quantity}`
+                    `${escapeHtml(item.product_name)} (${escapeHtml(item.size)}) x${escapeHtml(item.quantity)}`
                 ).join('<br>');
             }
 
@@ -635,19 +650,19 @@
                     <div class="order-customer">
                         <div class="order-customer-row">
                             <i class="fa-solid fa-user"></i>
-                            <strong>${order.nome_completo || 'N/A'}</strong>
+                            <strong>${escapeHtml(order.nome_completo) || 'N/A'}</strong>
                         </div>
                         <div class="order-customer-row">
                             <i class="fa-solid fa-phone"></i>
-                            <span>${order.telefone || 'N/A'}</span>
+                            <span>${escapeHtml(order.telefone) || 'N/A'}</span>
                         </div>
                         <div class="order-customer-row">
                             <i class="fa-solid fa-location-dot"></i>
-                            <span>${order.cidade_estado || 'N/A'}</span>
+                            <span>${escapeHtml(order.cidade_estado) || 'N/A'}</span>
                         </div>
                         <div class="order-customer-row">
                             <i class="fa-solid fa-truck"></i>
-                            <span>${order.excursao_transportadora || 'N/A'}</span>
+                            <span>${escapeHtml(order.excursao_transportadora) || 'N/A'}</span>
                         </div>
                     </div>
                     
@@ -658,13 +673,13 @@
 
                     ${order.observacoes ? `
                         <div class="order-observations">
-                            <strong>Obs:</strong> ${order.observacoes}
+                            <strong>Obs:</strong> ${escapeHtml(order.observacoes)}
                         </div>
                     ` : ''}
 
                     ${order.cores_nao_desejadas ? `
                         <div class="order-observations">
-                            <strong>Cores não desejadas:</strong> ${order.cores_nao_desejadas}
+                            <strong>Cores não desejadas:</strong> ${escapeHtml(order.cores_nao_desejadas)}
                         </div>
                     ` : ''}
 
@@ -825,13 +840,13 @@
         let itemsHtml = '';
         if (order.items && Array.isArray(order.items)) {
             itemsHtml = order.items.map(item =>
-                `<div class="lightbox-item-row">${item.product_name} (${item.size}) x${item.quantity}</div>`
+                `<div class="lightbox-item-row">${escapeHtml(item.product_name)} (${escapeHtml(item.size)}) x${escapeHtml(item.quantity)}</div>`
             ).join('');
         }
 
         body.innerHTML = `
             <div class="lightbox-order-header ${statusClass}">
-                <h2>${order.nome_completo || 'Cliente'}</h2>
+                <h2>${escapeHtml(order.nome_completo) || 'Cliente'}</h2>
                 <div class="lightbox-order-id">Pedido #${order.id.substring(0, 8).toUpperCase()}</div>
                 <span class="lightbox-order-status ${statusClass}">${statusLabel}</span>
             </div>
@@ -841,19 +856,19 @@
                     <div class="lightbox-customer-info">
                         <div class="lightbox-info-item">
                             <i class="fa-solid fa-phone"></i>
-                            <span>${order.telefone || 'N/A'}</span>
+                            <span>${escapeHtml(order.telefone) || 'N/A'}</span>
                         </div>
                         <div class="lightbox-info-item">
                             <i class="fa-solid fa-location-dot"></i>
-                            <span>${order.cidade_estado || 'N/A'}</span>
+                            <span>${escapeHtml(order.cidade_estado) || 'N/A'}</span>
                         </div>
                         <div class="lightbox-info-item">
                             <i class="fa-solid fa-truck"></i>
-                            <span>${order.excursao_transportadora || 'N/A'}</span>
+                            <span>${escapeHtml(order.excursao_transportadora) || 'N/A'}</span>
                         </div>
                         <div class="lightbox-info-item">
                             <i class="fa-solid fa-credit-card"></i>
-                            <span>${order.forma_pagamento || 'PIX'}</span>
+                            <span>${escapeHtml(order.forma_pagamento) || 'PIX'}</span>
                         </div>
                     </div>
                 </div>
@@ -868,14 +883,14 @@
                 ${order.observacoes ? `
                     <div class="lightbox-section">
                         <div class="lightbox-section-title">Observações</div>
-                        <div class="lightbox-observations">${order.observacoes}</div>
+                        <div class="lightbox-observations">${escapeHtml(order.observacoes)}</div>
                     </div>
                 ` : ''}
 
                 ${order.cores_nao_desejadas ? `
                     <div class="lightbox-section">
                         <div class="lightbox-section-title">Cores Não Desejadas</div>
-                        <div class="lightbox-observations">${order.cores_nao_desejadas}</div>
+                        <div class="lightbox-observations">${escapeHtml(order.cores_nao_desejadas)}</div>
                     </div>
                 ` : ''}
 
@@ -911,9 +926,9 @@
                         itemRows += `
                             <tr style="border-bottom: 1px solid #e0e0e0;">
                                 <td style="padding: 8px 10px; font-size: 13px; color: #333;">${idx + 1}</td>
-                                <td style="padding: 8px 10px; font-size: 13px; color: #333;">${item.product_name}</td>
-                                <td style="padding: 8px 10px; font-size: 13px; color: #333; text-align: center;">${item.size}</td>
-                                <td style="padding: 8px 10px; font-size: 13px; color: #333; text-align: center;">${item.quantity}</td>
+                                <td style="padding: 8px 10px; font-size: 13px; color: #333;">${escapeHtml(item.product_name)}</td>
+                                <td style="padding: 8px 10px; font-size: 13px; color: #333; text-align: center;">${escapeHtml(item.size)}</td>
+                                <td style="padding: 8px 10px; font-size: 13px; color: #333; text-align: center;">${escapeHtml(item.quantity)}</td>
                             </tr>
                         `;
                     });
@@ -982,15 +997,15 @@
                             <h3>Informações do Cliente</h3>
                             <table>
                                 <tr>
-                                    <td style="width:50%"><strong>Nome:</strong> ${order.nome_completo || 'N/A'}</td>
-                                    <td><strong>Telefone:</strong> ${order.telefone || 'N/A'}</td>
+                                    <td style="width:50%"><strong>Nome:</strong> ${escapeHtml(order.nome_completo) || 'N/A'}</td>
+                                    <td><strong>Telefone:</strong> ${escapeHtml(order.telefone) || 'N/A'}</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Cidade:</strong> ${order.cidade_estado || 'N/A'}</td>
-                                    <td><strong>Pagamento:</strong> ${order.forma_pagamento || 'PIX'}</td>
+                                    <td><strong>Cidade:</strong> ${escapeHtml(order.cidade_estado) || 'N/A'}</td>
+                                    <td><strong>Pagamento:</strong> ${escapeHtml(order.forma_pagamento) || 'PIX'}</td>
                                 </tr>
                                 <tr>
-                                    <td colspan="2"><strong>Transporte:</strong> ${order.excursao_transportadora || 'N/A'}</td>
+                                    <td colspan="2"><strong>Transporte:</strong> ${escapeHtml(order.excursao_transportadora) || 'N/A'}</td>
                                 </tr>
                             </table>
                         </div>
@@ -1015,14 +1030,14 @@
                         ${order.observacoes ? `
                         <div class="notes">
                             <strong>Observações:</strong>
-                            <p>${order.observacoes}</p>
+                            <p>${escapeHtml(order.observacoes)}</p>
                         </div>
                         ` : ''}
 
                         ${order.cores_nao_desejadas ? `
                         <div class="colors-block">
                             <strong>Cores Não Desejadas:</strong>
-                            <p>${order.cores_nao_desejadas}</p>
+                            <p>${escapeHtml(order.cores_nao_desejadas)}</p>
                         </div>
                         ` : ''}
 
@@ -1112,13 +1127,13 @@
 
             card.innerHTML = `
                 <div class="card-header">
-                    <img src="${thumb}" alt="${p.name}">
-                    <span class="card-title">${p.name}</span>
+                    <img src="${escapeHtml(thumb)}" alt="${escapeHtml(p.name)}">
+                    <span class="card-title">${escapeHtml(p.name)}</span>
                     <span class="card-price">${priceFormat.format(p.price || 0)}</span>
                 </div>
                 <div class="video-admin-preview">
                     ${hasVideo
-                    ? `<video src="${p.video_url}" controls muted preload="metadata"></video>`
+                    ? `<video src="${escapeHtml(p.video_url)}" controls muted preload="metadata"></video>`
                     : `<div class="no-video"><i class="fa-solid fa-film" style="font-size:2rem;color:#ccc;display:block;margin-bottom:8px;"></i>Nenhum vídeo</div>`
                 }
                 </div>

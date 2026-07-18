@@ -13,6 +13,14 @@
     <!-- Styles -->
     <link rel="stylesheet" href="style.css">
 
+    <!-- Hide the dashboard until auth is confirmed (prevents the pre-redirect flash) -->
+    <style>
+        body.admin-page:not(.authed) .admin-header,
+        body.admin-page:not(.authed) .admin-content {
+            display: none !important;
+        }
+    </style>
+
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
