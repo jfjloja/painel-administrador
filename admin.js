@@ -141,9 +141,16 @@
         // Products Search Bar Logic
         const searchInput = document.getElementById('admin-search');
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase().trim();
-                filterProductsByName(query);
+            searchInput.addEventListener('input', () => {
+                applyProductFilters();
+            });
+        }
+
+        // Stock Filter Logic
+        const stockFilter = document.getElementById('admin-stock-filter');
+        if (stockFilter) {
+            stockFilter.addEventListener('change', () => {
+                applyProductFilters();
             });
         }
 
@@ -327,18 +334,28 @@
         setLoading(false);
     }
 
-    // Filter products by name for search
-    function filterProductsByName(query) {
-        console.log("Searching for:", query, "Products count:", currentProducts.length);
-        if (!query) {
-            renderGrid(currentProducts);
-            return;
+    // Combined filter for search + stock status
+    function applyProductFilters() {
+        const searchQuery = (document.getElementById('admin-search')?.value || '').toLowerCase().trim();
+        const stockFilter = document.getElementById('admin-stock-filter')?.value || 'all';
+
+        let filtered = [...currentProducts];
+
+        // Filter by stock status
+        if (stockFilter === 'in-stock') {
+            filtered = filtered.filter(p => !p.is_out_of_stock);
+        } else if (stockFilter === 'out-of-stock') {
+            filtered = filtered.filter(p => p.is_out_of_stock);
         }
-        const filtered = currentProducts.filter(p => {
-            const name = p.name ? p.name.toLowerCase() : '';
-            return name.includes(query);
-        });
-        console.log("Found:", filtered.length, "results");
+
+        // Filter by name
+        if (searchQuery) {
+            filtered = filtered.filter(p => {
+                const name = p.name ? p.name.toLowerCase() : '';
+                return name.includes(searchQuery);
+            });
+        }
+
         renderGrid(filtered);
     }
 
@@ -347,37 +364,48 @@
         if (!grid) return;
         grid.innerHTML = '';
 
+        // Make functions global (once)
+        window.editProduct = (id) => {
+            const p = currentProducts.find(x => x.id === id);
+            if (p) openModal(p);
+        };
+
+        window.deleteProduct = async (id) => {
+            if (!confirm('Tem certeza? Essa ação não pode ser desfeita.')) return;
+            setLoading(true);
+            const { error } = await supabase.from('store_items').delete().eq('id', id);
+            if (error) {
+                alert('Erro ao apagar: ' + error.message);
+            } else {
+                fetchProducts();
+            }
+            setLoading(false);
+        };
+
         products.forEach(p => {
             const card = document.createElement('div');
-            card.className = 'card admin-card';
+            const isOutOfStock = p.is_out_of_stock;
+            card.className = `card admin-card${isOutOfStock ? ' admin-card-out-of-stock' : ''}`;
 
             // Parse image safely
             let img = 'https://via.placeholder.com/300';
             if (p.images && p.images.length > 0) img = p.images[0];
             else if (p.image_url) img = p.image_url;
 
-            // Make functions global
-            window.editProduct = (id) => {
-                const p = currentProducts.find(x => x.id === id);
-                if (p) openModal(p);
-            };
+            // Badge HTML
+            let badgeHTML = '';
+            if (isOutOfStock) {
+                badgeHTML = `<div class="admin-badge-out"><i class="fa-solid fa-ban"></i> ESGOTADO</div>`;
+            } else if (p.is_on_sale) {
+                badgeHTML = `<div class="admin-badge-sale"><i class="fa-solid fa-fire"></i> PROMOÇÃO</div>`;
+            } else if (p.is_new) {
+                badgeHTML = `<div class="admin-badge-new"><i class="fa-solid fa-sparkles"></i> NOVO</div>`;
+            }
 
-            window.deleteProduct = async (id) => {
-                if (!confirm('Tem certeza? Essa ação não pode ser desfeita.')) return;
-                setLoading(true);
-                const { error } = await supabase.from('store_items').delete().eq('id', id);
-                if (error) {
-                    alert('Erro ao apagar: ' + error.message);
-                } else {
-                    fetchProducts();
-                }
-                setLoading(false);
-            };
-
-            // Basic Info
             card.innerHTML = `
+                ${badgeHTML}
                 <div class="card-image-wrapper">
-                    <img src="${escapeHtml(img)}" class="card-image">
+                    <img src="${escapeHtml(img)}" class="card-image${isOutOfStock ? ' out-of-stock-img' : ''}">
                 </div>
                 <div class="card-content">
                     <div class="card-category">${escapeHtml(p.category)}</div>

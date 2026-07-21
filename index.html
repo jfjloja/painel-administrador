@@ -68,9 +68,16 @@
         <div id="tab-products" class="tab-content active">
             <div class="admin-toolbar">
                 <h2>Gerenciar Produtos</h2>
-                <div class="admin-search-bar">
-                    <i class="fa-solid fa-search"></i>
-                    <input type="text" id="admin-search" placeholder="Buscar por nome...">
+                <div class="admin-filters-row">
+                    <div class="admin-search-bar">
+                        <i class="fa-solid fa-search"></i>
+                        <input type="text" id="admin-search" placeholder="Buscar por nome...">
+                    </div>
+                    <select id="admin-stock-filter" class="admin-stock-filter">
+                        <option value="all">Todos os Produtos</option>
+                        <option value="in-stock">Em Estoque</option>
+                        <option value="out-of-stock">Esgotados</option>
+                    </select>
                 </div>
                 <button id="btn-add-new" class="btn-add-new">
                     <i class="fa-solid fa-plus"></i> Adicionar Novo Item
