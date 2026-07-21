@@ -411,6 +411,7 @@
                     <div class="card-category">${escapeHtml(p.category)}</div>
                     <h3 class="card-title">${escapeHtml(p.name)}</h3>
                     <div class="card-price">R$ ${escapeHtml(p.price)}</div>
+                    <div class="card-sizes">${(p.sizes || []).map(s => `<span class="size-badge">${escapeHtml(s)}</span>`).join('')}</div>
                     
                     <div class="admin-card-actions">
                         <button class="btn-edit" onclick="editProduct('${p.id}')">
