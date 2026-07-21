@@ -365,6 +365,8 @@
             filtered = filtered.filter(p => !p.is_out_of_stock);
         } else if (stockFilter === 'out-of-stock') {
             filtered = filtered.filter(p => p.is_out_of_stock);
+        } else if (stockFilter === 'on-sale') {
+            filtered = filtered.filter(p => p.is_on_sale);
         }
 
         // Filter by name
