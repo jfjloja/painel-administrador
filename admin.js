@@ -327,9 +327,28 @@
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (!error) {
-            currentProducts = data;
-            renderGrid(data);
+        if (!error && data) {
+            currentProducts = data.map(item => {
+                let sizes = [];
+                if (item.sizes) {
+                    if (Array.isArray(item.sizes)) {
+                        sizes = item.sizes;
+                    } else if (typeof item.sizes === 'string') {
+                        try {
+                            const parsed = JSON.parse(item.sizes);
+                            if (Array.isArray(parsed)) sizes = parsed;
+                        } catch (e) {
+                            let clean = item.sizes.replace(/^\{|\}$/g, '');
+                            sizes = clean.split(',').map(s => s.replace(/"/g, '').trim()).filter(s => s.length > 0);
+                        }
+                    }
+                }
+                return {
+                    ...item,
+                    sizes: sizes
+                };
+            });
+            renderGrid(currentProducts);
         }
         setLoading(false);
     }
@@ -402,6 +421,12 @@
                 badgeHTML = `<div class="admin-badge-new"><i class="fa-solid fa-sparkles"></i> NOVO</div>`;
             }
 
+            // Sizes HTML
+            const sizeList = Array.isArray(p.sizes) ? p.sizes : [];
+            const sizesHTML = sizeList.length > 0
+                ? sizeList.map(s => `<span class="size-badge">${escapeHtml(s)}</span>`).join('')
+                : '<span class="size-badge empty-size">Sem tamanho</span>';
+
             card.innerHTML = `
                 ${badgeHTML}
                 <div class="card-image-wrapper">
@@ -411,7 +436,7 @@
                     <div class="card-category">${escapeHtml(p.category)}</div>
                     <h3 class="card-title">${escapeHtml(p.name)}</h3>
                     <div class="card-price">R$ ${escapeHtml(p.price)}</div>
-                    <div class="card-sizes">${(p.sizes || []).map(s => `<span class="size-badge">${escapeHtml(s)}</span>`).join('')}</div>
+                    <div class="card-sizes">${sizesHTML}</div>
                     
                     <div class="admin-card-actions">
                         <button class="btn-edit" onclick="editProduct('${p.id}')">
