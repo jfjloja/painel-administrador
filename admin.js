@@ -71,7 +71,7 @@
             console.log("Detected Admin Page");
             if (!session) {
                 console.log("No session, redirecting to login...");
-                window.location.href = 'login.html';
+                window.location.href = '/login';
             } else {
                 currentUser = session.user;
                 const userDisplay = document.getElementById('admin-user');
@@ -90,7 +90,7 @@
         if (btnLogout) {
             btnLogout.onclick = async () => {
                 await supabase.auth.signOut();
-                window.location.href = 'login.html';
+                window.location.href = '/login';
             };
         }
 
