@@ -320,6 +320,10 @@
         btnSave.innerText = 'Atualizar Senha';
     }
 
+    function isTruthy(val) {
+        return val === true || val === 'true' || val === 1 || val === '1';
+    }
+
     async function fetchProducts() {
         setLoading(true);
         const { data, error } = await supabase
@@ -345,10 +349,13 @@
                 }
                 return {
                     ...item,
-                    sizes: sizes
+                    sizes: sizes,
+                    is_on_sale: isTruthy(item.is_on_sale),
+                    is_out_of_stock: isTruthy(item.is_out_of_stock),
+                    is_new: isTruthy(item.is_new)
                 };
             });
-            renderGrid(currentProducts);
+            applyProductFilters();
         }
         setLoading(false);
     }
@@ -366,7 +373,7 @@
         } else if (stockFilter === 'out-of-stock') {
             filtered = filtered.filter(p => p.is_out_of_stock);
         } else if (stockFilter === 'on-sale') {
-            filtered = filtered.filter(p => p.is_on_sale);
+            filtered = filtered.filter(p => p.is_on_sale === true);
         }
 
         // Filter by name
