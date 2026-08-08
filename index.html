@@ -62,6 +62,9 @@
             <button class="admin-tab" data-tab="videos">
                 <i class="fa-solid fa-video"></i> Vídeos
             </button>
+            <button class="admin-tab" data-tab="config">
+                <i class="fa-solid fa-gear"></i> Configurações
+            </button>
         </div>
 
         <!-- PRODUCTS TAB -->
@@ -154,6 +157,57 @@
             <div id="videos-empty" class="empty-state hidden">
                 <i class="fa-solid fa-film"></i>
                 <p>Nenhum produto encontrado.</p>
+            </div>
+        </div>
+
+        <!-- CONFIG TAB -->
+        <div id="tab-config" class="tab-content">
+            <!-- LINKS DA BIO (Linktree) -->
+            <div class="config-card">
+                <div class="config-card-head">
+                    <h2><i class="fa-solid fa-link"></i> Links da Bio</h2>
+                    <a href="https://jfjloja.com/links" target="_blank" class="config-link-preview">
+                        <i class="fa-solid fa-up-right-from-square"></i> Ver página
+                    </a>
+                </div>
+                <p class="config-hint">Botões que aparecem na página de links do Instagram. Edite o texto e o link de
+                    cada botão. Marque "Destacar" para dar o efeito pulsante (recomendado para a Loja).</p>
+
+                <div id="bio-links-list" class="bio-links-list">
+                    <!-- Link rows injected by JS -->
+                </div>
+
+                <button type="button" id="btn-add-bio-link" class="btn-secondary">
+                    <i class="fa-solid fa-plus"></i> Adicionar botão
+                </button>
+
+                <div id="bio-links-status" class="config-status hidden"></div>
+                <button type="button" id="btn-save-bio-links" class="btn-save">
+                    <i class="fa-solid fa-floppy-disk"></i> Salvar Links
+                </button>
+            </div>
+
+            <!-- MARKETING PIXELS -->
+            <div class="config-card">
+                <div class="config-card-head">
+                    <h2><i class="fa-solid fa-chart-line"></i> Pixels de Marketing</h2>
+                </div>
+                <p class="config-hint">Cole os IDs para ativar o rastreamento de eventos (visualização, adicionar ao
+                    carrinho, iniciar pedido). Deixe em branco para desativar.</p>
+
+                <div class="config-field">
+                    <label for="cfg-meta-pixel">Meta Pixel ID (Facebook / Instagram)</label>
+                    <input type="text" id="cfg-meta-pixel" placeholder="Ex: 123456789012345" autocomplete="off">
+                </div>
+                <div class="config-field">
+                    <label for="cfg-google-tag">Google Tag ID (GA4 ou Google Ads)</label>
+                    <input type="text" id="cfg-google-tag" placeholder="Ex: G-XXXXXXX ou AW-XXXXXXXXX" autocomplete="off">
+                </div>
+
+                <div id="pixels-status" class="config-status hidden"></div>
+                <button type="button" id="btn-save-pixels" class="btn-save">
+                    <i class="fa-solid fa-floppy-disk"></i> Salvar Pixels
+                </button>
             </div>
         </div>
     </main>

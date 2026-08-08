@@ -187,6 +187,9 @@
         // Emergency Toggle
         setupEmergencyToggle();
 
+        // Config tab (bio links + pixels)
+        setupConfigTab();
+
         // Load Data
         fetchProducts();
     }
@@ -217,8 +220,164 @@
                 if (tabName === 'videos') {
                     renderVideoGrid();
                 }
+
+                // Load config when switching to config tab
+                if (tabName === 'config') {
+                    loadConfigTab();
+                }
             });
         });
+    }
+
+    // =========================================================
+    // CONFIG TAB — Bio links (Linktree) + marketing pixels
+    // =========================================================
+    const DEFAULT_BIO_LINKS = [
+        { label: 'Loja', url: 'https://jfjloja.com', highlight: true },
+        { label: 'Grupo Atacadista', url: '', highlight: false },
+        { label: 'Falar no WhatsApp', url: 'https://wa.me/5581995612912', highlight: false }
+    ];
+    let configLoaded = false;
+
+    function setupConfigTab() {
+        const addBtn = document.getElementById('btn-add-bio-link');
+        if (addBtn) addBtn.onclick = () => addBioLinkRow({ label: '', url: '', highlight: false });
+
+        const saveLinksBtn = document.getElementById('btn-save-bio-links');
+        if (saveLinksBtn) saveLinksBtn.onclick = saveBioLinks;
+
+        const savePixelsBtn = document.getElementById('btn-save-pixels');
+        if (savePixelsBtn) savePixelsBtn.onclick = savePixelSettings;
+    }
+
+    async function loadConfigTab() {
+        if (configLoaded) return; // keep unsaved edits if user re-opens the tab
+        try {
+            const { data } = await supabase.from('store_settings').select('*').limit(1).single();
+            const links = (data && Array.isArray(data.links) && data.links.length) ? data.links : DEFAULT_BIO_LINKS;
+            renderBioLinks(links);
+            const metaEl = document.getElementById('cfg-meta-pixel');
+            const googleEl = document.getElementById('cfg-google-tag');
+            if (metaEl) metaEl.value = (data && data.meta_pixel_id) || '';
+            if (googleEl) googleEl.value = (data && data.google_tag_id) || '';
+        } catch (err) {
+            console.warn('Config load failed, using defaults:', err);
+            renderBioLinks(DEFAULT_BIO_LINKS);
+        }
+        configLoaded = true;
+    }
+
+    function renderBioLinks(links) {
+        const list = document.getElementById('bio-links-list');
+        if (!list) return;
+        list.innerHTML = '';
+        links.forEach(addBioLinkRow);
+    }
+
+    function addBioLinkRow(link) {
+        link = link || {};
+        const list = document.getElementById('bio-links-list');
+        if (!list) return;
+
+        const row = document.createElement('div');
+        row.className = 'bio-link-row';
+
+        const grip = document.createElement('i');
+        grip.className = 'fa-solid fa-grip-vertical bio-grip';
+
+        const labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.className = 'bio-label';
+        labelInput.placeholder = 'Texto do botão (ex: Loja)';
+        labelInput.value = link.label || '';
+
+        const urlInput = document.createElement('input');
+        urlInput.type = 'text';
+        urlInput.className = 'bio-url';
+        urlInput.placeholder = 'Link (https://...)';
+        urlInput.value = link.url || '';
+
+        const hlLabel = document.createElement('label');
+        hlLabel.className = 'bio-highlight-label';
+        hlLabel.title = 'Destacar com efeito pulsante';
+        const hlInput = document.createElement('input');
+        hlInput.type = 'checkbox';
+        hlInput.className = 'bio-highlight';
+        hlInput.checked = link.highlight === true;
+        hlLabel.appendChild(hlInput);
+        hlLabel.appendChild(document.createTextNode(' Destacar'));
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'bio-remove';
+        removeBtn.title = 'Remover botão';
+        removeBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+        removeBtn.onclick = () => row.remove();
+
+        row.appendChild(grip);
+        row.appendChild(labelInput);
+        row.appendChild(urlInput);
+        row.appendChild(hlLabel);
+        row.appendChild(removeBtn);
+        list.appendChild(row);
+    }
+
+    async function saveBioLinks() {
+        const rows = document.querySelectorAll('#bio-links-list .bio-link-row');
+        const links = [];
+        rows.forEach(row => {
+            const label = row.querySelector('.bio-label').value.trim();
+            const url = row.querySelector('.bio-url').value.trim();
+            const highlight = row.querySelector('.bio-highlight').checked;
+            if (label || url) links.push({ label, url, highlight });
+        });
+
+        const btn = document.getElementById('btn-save-bio-links');
+        if (btn) btn.disabled = true;
+        try {
+            const { error } = await supabase
+                .from('store_settings')
+                .update({ links, updated_at: new Date().toISOString() })
+                .not('id', 'is', null);
+            showConfigStatus('bio-links-status', error, 'Links salvos! Podem levar alguns minutos para atualizar no site.');
+        } catch (err) {
+            showConfigStatus('bio-links-status', err, '');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function savePixelSettings() {
+        const meta = (document.getElementById('cfg-meta-pixel').value || '').trim();
+        const google = (document.getElementById('cfg-google-tag').value || '').trim();
+
+        const btn = document.getElementById('btn-save-pixels');
+        if (btn) btn.disabled = true;
+        try {
+            const { error } = await supabase
+                .from('store_settings')
+                .update({ meta_pixel_id: meta || null, google_tag_id: google || null, updated_at: new Date().toISOString() })
+                .not('id', 'is', null);
+            showConfigStatus('pixels-status', error, 'Pixels salvos!');
+        } catch (err) {
+            showConfigStatus('pixels-status', err, '');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    function showConfigStatus(elId, error, successMsg) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.classList.remove('hidden', 'ok', 'err');
+        if (error) {
+            el.classList.add('err');
+            el.textContent = 'Erro ao salvar: ' + (error.message || error);
+        } else {
+            el.classList.add('ok');
+            el.textContent = successMsg;
+            setTimeout(() => el.classList.add('hidden'), 4000);
+        }
     }
 
     // --- GALLERY LOGIC ---
